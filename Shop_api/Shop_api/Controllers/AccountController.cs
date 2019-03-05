@@ -11,5 +11,10 @@ namespace Shop_api.Controllers
     [ApiController]
     public class AccountController : ControllerBase
     {
+        // добавление пользователя
+        // удаление пользователя по id
+        // изменение пользователя по id
+        // авторизация по имени пользователя и паролю
+        // регистрация нового пользователя
     }
 }
