@@ -3,15 +3,17 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Shop_api.Data;
 
 namespace Shop_api.Migrations
 {
     [DbContext(typeof(dataContext))]
-    partial class dataContextModelSnapshot : ModelSnapshot
+    [Migration("20190305182816_20280503")]
+    partial class _20280503
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -144,6 +146,27 @@ namespace Shop_api.Migrations
                     b.ToTable("Groups");
                 });
 
+            modelBuilder.Entity("Shop_api.Models.Person", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasAnnotation("SqlServer:ValueGenerationStrategy", SqlServerValueGenerationStrategy.IdentityColumn);
+
+                    b.Property<string>("Gender");
+
+                    b.Property<string>("IdentityId");
+
+                    b.Property<string>("Locale");
+
+                    b.Property<string>("Location");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("IdentityId");
+
+                    b.ToTable("Customers");
+                });
+
             modelBuilder.Entity("Shop_api.Models.Product", b =>
                 {
                     b.Property<int>("Id")
@@ -273,6 +296,13 @@ namespace Shop_api.Migrations
                         .WithMany()
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade);
+                });
+
+            modelBuilder.Entity("Shop_api.Models.Person", b =>
+                {
+                    b.HasOne("Shop_api.Models.User", "Identity")
+                        .WithMany()
+                        .HasForeignKey("IdentityId");
                 });
 
             modelBuilder.Entity("Shop_api.Models.Product", b =>

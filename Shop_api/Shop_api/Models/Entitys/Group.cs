@@ -17,7 +17,7 @@ namespace Shop_api.Models
         public string Title { get; set; }
         public string Discription { get; set; }
         // link
-        public List<Product> Products { get; set; }
+        public List<Product> Products;
 
     }
 }

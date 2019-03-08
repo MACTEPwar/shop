@@ -8,6 +8,9 @@ namespace Shop_api.Models
 {
     public class User : IdentityUser
     {
-        public string Login { get; set; }
+        public string FirstName { get; set; }
+        public string LastName { get; set; }
+        public long? FacebookId { get; set; }
+        public string PictureUrl { get; set; }
     }
 }
