@@ -9,6 +9,7 @@ using System.Text;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.AspNetCore.Authentication.Google;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authentication.OAuth;
 using Microsoft.AspNetCore.Builder;
@@ -47,7 +48,11 @@ namespace Shop_api
             services.AddDbContext<dataContext>(options =>
                 options.UseSqlServer(
                     Configuration.GetConnectionString("DefaultConnection")));
-            services.AddIdentity<User, IdentityRole>()
+            services.AddIdentity<User, IdentityRole>(opts =>
+                    {
+                        opts.User.AllowedUserNameCharacters = null;
+                    }
+                )
                 .AddEntityFrameworkStores<dataContext>()
                 .AddDefaultTokenProviders();
             JwtSecurityTokenHandler.DefaultInboundClaimTypeMap.Clear(); // => remove default claims
@@ -71,52 +76,57 @@ namespace Shop_api
                         ClockSkew = TimeSpan.Zero // remove delay of token when expire
                     };
                 });
-            //services.AddAuthentication().AddGoogle(googleOptions =>
-            //{
-            //    googleOptions.ClientId = Configuration["Authentication:Google:ClientId"];
-            //    googleOptions.ClientSecret = Configuration["Authentication:Google:ClientSecret"];
-            //});
-            services.AddAuthentication(options =>
-            {
-                options.DefaultAuthenticateScheme = CookieAuthenticationDefaults.AuthenticationScheme;
-                options.DefaultSignInScheme = CookieAuthenticationDefaults.AuthenticationScheme;
-                options.DefaultChallengeScheme = "GitHub";
-            })
-            .AddCookie()
-            .AddOAuth("GitHub", options =>
-            {
-                options.ClientId = Configuration["GitHub:ClientId"];
-                options.ClientSecret = Configuration["GitHub:ClientSecret"];
-                options.CallbackPath = new PathString("/api/Account/SignInGithub");
-
-                options.AuthorizationEndpoint = "https://github.com/login/oauth/authorize";
-                options.TokenEndpoint = "https://github.com/login/oauth/access_token";
-                options.UserInformationEndpoint = "https://api.github.com/user";
-
-                options.ClaimActions.MapJsonKey(ClaimTypes.NameIdentifier, "id");
-                options.ClaimActions.MapJsonKey(ClaimTypes.Name, "name");
-                options.ClaimActions.MapJsonKey("urn:github:login", "login");
-                options.ClaimActions.MapJsonKey("urn:github:url", "html_url");
-                options.ClaimActions.MapJsonKey("urn:github:avatar", "avatar_url");
-
-                options.Events = new OAuthEvents
+            services.AddAuthentication(
+                v =>
                 {
-                    OnCreatingTicket = async context =>
-                    {
-                        var request = new HttpRequestMessage(HttpMethod.Get, context.Options.UserInformationEndpoint);
-                        request.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
-                        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", context.AccessToken);
+                    v.DefaultAuthenticateScheme = GoogleDefaults.AuthenticationScheme;
+                    v.DefaultChallengeScheme = GoogleDefaults.AuthenticationScheme;
+                }).AddGoogle(googleOptions =>
+                {
+                    googleOptions.ClientId = Configuration["Authentication:Google:ClientId"];
+                    googleOptions.ClientSecret = Configuration["Authentication:Google:ClientSecret"];
+                });
+            //services.AddAuthentication(options =>
+            //{
+            //    options.DefaultAuthenticateScheme = CookieAuthenticationDefaults.AuthenticationScheme;
+            //    options.DefaultSignInScheme = CookieAuthenticationDefaults.AuthenticationScheme;
+            //    options.DefaultChallengeScheme = "GitHub";
+            //})
+            //.AddCookie()
+            //.AddOAuth("GitHub", options =>
+            //{
+            //    options.ClientId = Configuration["GitHub:ClientId"];
+            //    options.ClientSecret = Configuration["GitHub:ClientSecret"];
+            //    options.CallbackPath = new PathString("/api/Account/SignInGithub");
 
-                        var response = await context.Backchannel.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, context.HttpContext.RequestAborted);
-                        response.EnsureSuccessStatusCode();
+            //    options.AuthorizationEndpoint = "https://github.com/login/oauth/authorize";
+            //    options.TokenEndpoint = "https://github.com/login/oauth/access_token";
+            //    options.UserInformationEndpoint = "https://api.github.com/user";
 
-                        var user = JObject.Parse(await response.Content.ReadAsStringAsync());
+            //    options.ClaimActions.MapJsonKey(ClaimTypes.NameIdentifier, "id");
+            //    options.ClaimActions.MapJsonKey(ClaimTypes.Name, "name");
+            //    options.ClaimActions.MapJsonKey("urn:github:login", "login");
+            //    options.ClaimActions.MapJsonKey("urn:github:url", "html_url");
+            //    options.ClaimActions.MapJsonKey("urn:github:avatar", "avatar_url");
 
-                        context.RunClaimActions(user);
-                        return;
-                    }
-                };
-            });
+            //    options.Events = new OAuthEvents
+            //    {
+            //        OnCreatingTicket = async context =>
+            //        {
+            //            var request = new HttpRequestMessage(HttpMethod.Get, context.Options.UserInformationEndpoint);
+            //            request.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
+            //            request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", context.AccessToken);
+
+            //            var response = await context.Backchannel.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, context.HttpContext.RequestAborted);
+            //            response.EnsureSuccessStatusCode();
+
+            //            var user = JObject.Parse(await response.Content.ReadAsStringAsync());
+
+            //            context.RunClaimActions(user);
+            //            return;
+            //        }
+            //    };
+            //});
             services.AddCors(options =>
     options.AddPolicy("AllowMyOrigin",
 builder => builder.WithOrigins("https://localhost:44311").AllowAnyOrigin().AllowAnyMethod().AllowAnyHeader()
@@ -145,5 +155,5 @@ builder => builder.WithOrigins("https://localhost:44311").AllowAnyOrigin().Allow
             app.UseHttpsRedirection();
             app.UseMvc();
         }
-    }  
+    }
 }

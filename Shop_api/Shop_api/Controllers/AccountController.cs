@@ -3,16 +3,20 @@ using System.Collections.Generic;
 using System.IdentityModel.Tokens.Jwt;
 using System.Linq;
 using System.Net.Http;
+using System.Net.Http.Headers;
 using System.Security.Claims;
 using System.Text;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authentication.OAuth;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Configuration;
 using Microsoft.IdentityModel.Tokens;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 using Shop_api.Data;
 using Shop_api.Models;
 
@@ -35,9 +39,9 @@ namespace Shop_api.Controllers
                 UserManager<User> userManager,
                 SignInManager<User> signInManager,
                 IConfiguration configuration
-                //RoleManager<User> roleManager,
-                //IJwtFactory jwtFactory,
-                //JwtIssuerOptions jwtOptions
+            //RoleManager<User> roleManager,
+            //IJwtFactory jwtFactory,
+            //JwtIssuerOptions jwtOptions
             )
         {
             _a = a;
@@ -72,34 +76,71 @@ namespace Shop_api.Controllers
         {
             return Challenge(provider);
         }
-                  
-        [HttpGet("SignInGithub")]
-        public async Task<IActionResult> SignInGithub(string code)
-        {
-            //return Challenge(new AuthenticationProperties { RedirectUri = "https://localhost:44397/api/account/SignInGithu" }, "GitHub");
-            //return Challenge("GitHub");
-            return Ok(code);
-        }
 
-        [HttpGet("api/Account/SignInGithub")]
-        public async Task<IActionResult> SignInGithub2(string code)
+        //[HttpGet("SignInGithub")]
+        //public async Task<IActionResult> SignInGithub(string code)
+        //{
+        //    //return Challenge(new AuthenticationProperties { RedirectUri = "https://localhost:44397/api/account/SignInGithu" }, "GitHub");
+        //    //return Challenge("GitHub");
+        //    return Ok(code);
+        //}
+
+        //[HttpGet("api/Account/SignInGithub")]
+        //public async Task<IActionResult> SignInGithub2(string code)
+        //{
+        //    //return Challenge(new AuthenticationProperties { RedirectUri = "https://localhost:44397/api/account/SignInGithu" }, "GitHub");
+        //    //return Challenge("GitHub");
+        //    return Ok();
+        //}
+
+        //[Authorize(= "Google")]
+        //[Authorize]
+        [HttpGet("api/Account/SignInGoogle/{access_token}")]
+        public async Task<IActionResult> _signInGoogle(string access_token)
         {
-            //return Challenge(new AuthenticationProperties { RedirectUri = "https://localhost:44397/api/account/SignInGithu" }, "GitHub");
-            //return Challenge("GitHub");
-            return Ok();
+            HttpClient client = new HttpClient();
+            HttpResponseMessage response = await client.GetAsync($"https://www.googleapis.com/oauth2/v1/userinfo?alt=json&access_token={access_token}");
+            using (HttpContent content = response.Content)
+            {
+                string data = await content.ReadAsStringAsync();
+                if (data != null)
+                {
+                    JObject dataObj = JsonConvert.DeserializeObject(data) as JObject;
+                    //return Ok(dataObj);
+                    //return Ok(dataObj.GetValue("email").ToString());
+                    User _user = await _userManager.FindByEmailAsync(dataObj.GetValue("email").ToString());
+                    if (_user != null)
+                    {
+                        string password = dataObj.GetValue("id").ToString() + "123qweASD!@#";
+                        //var res = await _signInManager.PasswordSignInAsync(_user, password, true, false);
+                        //return Ok(res);
+                        // Залогинить _user по JWT
+                    }
+                    //else
+                    {
+                        _user = new User()
+                        {
+                            Email = dataObj.GetValue("email").ToString(),
+                            UserName = dataObj.GetValue("name").ToString()
+                        };
+                        string password = dataObj.GetValue("id").ToString() + "123qweASD!@#";
+                        await _userManager.CreateAsync(_user, password);
+                        //await _signInManager.PasswordSignInAsync(_user, password, true, false);
+                        // Залогинить _user по JWT
+                    }
+                    return Ok(_user);
+                }
+            }
+
+
+            return Ok(User.Identity.Name);
+
         }
 
         [HttpGet("tst")]
-        public async Task<IActionResult> tst(string t)
+        public async Task<IActionResult> signInGoogle()
         {
-            //List<AuthenticationScheme> listAS = new List<AuthenticationScheme>();
-            //foreach (AuthenticationScheme p in await _a.GetRequestHandlerSchemesAsync())
-            //{
-            //    listAS.Add(p);
-            //}
-            //return Ok(listAS);
-            //return Challenge(new AuthenticationProperties {RedirectUri = "/"}, "GitHub");
-            return Ok(t);
+            return Ok(_userManager.Users);
         }
 
         /// <summary>
