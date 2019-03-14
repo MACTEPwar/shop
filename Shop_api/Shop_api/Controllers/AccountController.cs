@@ -53,7 +53,7 @@ namespace Shop_api.Controllers
         }
 
         [HttpPost("api/[controller]/Register")]
-        public async Task<ActionResult<object>> Register([FromBody] RegisterViewModel model)
+        public async Task<ActionResult> Register([FromBody] RegisterViewModel model)
         {
             var user = new User
             {
@@ -65,38 +65,36 @@ namespace Shop_api.Controllers
             if (result.Succeeded)
             {
                 await _signInManager.SignInAsync(user, false);
-                return GenerateJwtToken(model.Email, user);
+                return Ok(new {
+                    access_token = GenerateJwtToken(model.Email, user),
+                    user_name = user.UserName,
+                    user_email = user.Email
+                });
             }
 
             return BadRequest(result.Errors);
         }
 
-        [HttpGet("api/[controller]/Login/{provider?}")]
-        public async Task<IActionResult> Login(string provider = "GitHub")
+        /// <summary>
+        /// JWT auth
+        /// </summary>
+        /// <param name="email"></param>
+        /// <param name="user"></param>
+        /// <returns></returns>
+        [HttpPost("api/Account/Login")]
+        public async Task<ActionResult> Login([FromBody] LoginViewModel model)
         {
-            return Challenge(provider);
+            var result = await _signInManager.PasswordSignInAsync(model.Email, model.Password, false /* remember me*/, false);
+            if (result.Succeeded)
+            {
+                var appUser = _userManager.Users.SingleOrDefault(r => r.Email == model.Email);
+                return Ok(GenerateJwtToken(appUser.Email, appUser));
+            }
+            return BadRequest();
         }
 
-        //[HttpGet("SignInGithub")]
-        //public async Task<IActionResult> SignInGithub(string code)
-        //{
-        //    //return Challenge(new AuthenticationProperties { RedirectUri = "https://localhost:44397/api/account/SignInGithu" }, "GitHub");
-        //    //return Challenge("GitHub");
-        //    return Ok(code);
-        //}
-
-        //[HttpGet("api/Account/SignInGithub")]
-        //public async Task<IActionResult> SignInGithub2(string code)
-        //{
-        //    //return Challenge(new AuthenticationProperties { RedirectUri = "https://localhost:44397/api/account/SignInGithu" }, "GitHub");
-        //    //return Challenge("GitHub");
-        //    return Ok();
-        //}
-
-        //[Authorize(= "Google")]
-        //[Authorize]
         [HttpGet("api/Account/SignInGoogle/{access_token}")]
-        public async Task<IActionResult> _signInGoogle(string access_token)
+        public async Task<ActionResult<object>> _signInGoogle(string access_token)
         {
             HttpClient client = new HttpClient();
             HttpResponseMessage response = await client.GetAsync($"https://www.googleapis.com/oauth2/v1/userinfo?alt=json&access_token={access_token}");
@@ -106,17 +104,19 @@ namespace Shop_api.Controllers
                 if (data != null)
                 {
                     JObject dataObj = JsonConvert.DeserializeObject(data) as JObject;
-                    //return Ok(dataObj);
-                    //return Ok(dataObj.GetValue("email").ToString());
                     User _user = await _userManager.FindByEmailAsync(dataObj.GetValue("email").ToString());
                     if (_user != null)
                     {
                         string password = dataObj.GetValue("id").ToString() + "123qweASD!@#";
-                        //var res = await _signInManager.PasswordSignInAsync(_user, password, true, false);
-                        //return Ok(res);
                         // Залогинить _user по JWT
+                        await _signInManager.SignInAsync(_user, true);
+                        return Ok(new {
+                            access_token = GenerateJwtToken(_user.Email, _user).ToString(),
+                            user_name = _user.UserName,
+                            user_email = _user.Email
+                        });
                     }
-                    //else
+                    else
                     {
                         _user = new User()
                         {
@@ -125,49 +125,46 @@ namespace Shop_api.Controllers
                         };
                         string password = dataObj.GetValue("id").ToString() + "123qweASD!@#";
                         await _userManager.CreateAsync(_user, password);
-                        //await _signInManager.PasswordSignInAsync(_user, password, true, false);
                         // Залогинить _user по JWT
+                        await _signInManager.SignInAsync(_user, true);
+                        return JsonConvert.SerializeObject(GenerateJwtToken(_user.Email, _user));
                     }
-                    return Ok(_user);
                 }
             }
-
-
-            return Ok(User.Identity.Name);
+            return BadRequest("Ошибка");
 
         }
 
-        [HttpGet("tst")]
-        public async Task<IActionResult> signInGoogle()
+        [Authorize]
+        [HttpGet("test")]
+        public async Task<IActionResult> tst()
         {
-            return Ok(_userManager.Users);
+            string token = HttpContext.Request.Headers.FirstOrDefault(x => x.Key == "Authorization").Value.ToString().Split(" ")[1];
+            string email = tokenParse(token).Claims.FirstOrDefault(x => x.Type == JwtRegisteredClaimNames.Email).Value.ToString();
+            return Ok(email);
         }
 
-        /// <summary>
-        /// JWT auth
-        /// </summary>
-        /// <param name="email"></param>
-        /// <param name="user"></param>
-        /// <returns></returns>
-        //[HttpPost("Login")]
-        //public async Task<ActionResult> Login([FromBody] User model)
-        //{
-        //    var result = await _signInManager.PasswordSignInAsync(model.UserName, model.PasswordHash, false /* remember me*/, false);
-        //    if (result.Succeeded)
-        //    {
-        //        var appUser = _userManager.Users.SingleOrDefault(r => r.UserName == model.UserName);
-        //        return Ok(GenerateJwtToken(appUser.Email, appUser));
-        //    }
-        //    return BadRequest();
-        //}
+        [NonAction]
+        public JwtSecurityToken tokenParse(string token)
+        {
+            var handler = new JwtSecurityTokenHandler();
+            return handler.ReadJwtToken(token);
 
-        [HttpGet("asdfasd")]
+        }
+
+        [NonAction]
+        public ActionResult getNameByToken(JwtSecurityToken token)
+        {
+            return Ok(token);
+        }
+
+        [NonAction]
         public Object GenerateJwtToken(string email, User user)
         {
 
             var claims = new List<Claim>
             {
-                new Claim(JwtRegisteredClaimNames.Sub, email),
+                new Claim(JwtRegisteredClaimNames.Email, email),
                 new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
                 new Claim(ClaimTypes.NameIdentifier, user.Id)
             };
@@ -183,6 +180,7 @@ namespace Shop_api.Controllers
                 expires: expires,
                 signingCredentials: creds
             );
+
 
             return new JwtSecurityTokenHandler().WriteToken(token);
         }

@@ -32,9 +32,6 @@ namespace Shop_api
 {
     public class Startup
     {
-        //private const string SecretKey = "iNivDmHLpUA223sqsfhqGbMRdRj1PVkH"; // todo: get this from somewhere secure
-        //private readonly SymmetricSecurityKey _signingKey = new SymmetricSecurityKey(Encoding.ASCII.GetBytes(SecretKey));
-
         public Startup(IConfiguration configuration)
         {
             Configuration = configuration;
@@ -76,57 +73,6 @@ namespace Shop_api
                         ClockSkew = TimeSpan.Zero // remove delay of token when expire
                     };
                 });
-            services.AddAuthentication(
-                v =>
-                {
-                    v.DefaultAuthenticateScheme = GoogleDefaults.AuthenticationScheme;
-                    v.DefaultChallengeScheme = GoogleDefaults.AuthenticationScheme;
-                }).AddGoogle(googleOptions =>
-                {
-                    googleOptions.ClientId = Configuration["Authentication:Google:ClientId"];
-                    googleOptions.ClientSecret = Configuration["Authentication:Google:ClientSecret"];
-                });
-            //services.AddAuthentication(options =>
-            //{
-            //    options.DefaultAuthenticateScheme = CookieAuthenticationDefaults.AuthenticationScheme;
-            //    options.DefaultSignInScheme = CookieAuthenticationDefaults.AuthenticationScheme;
-            //    options.DefaultChallengeScheme = "GitHub";
-            //})
-            //.AddCookie()
-            //.AddOAuth("GitHub", options =>
-            //{
-            //    options.ClientId = Configuration["GitHub:ClientId"];
-            //    options.ClientSecret = Configuration["GitHub:ClientSecret"];
-            //    options.CallbackPath = new PathString("/api/Account/SignInGithub");
-
-            //    options.AuthorizationEndpoint = "https://github.com/login/oauth/authorize";
-            //    options.TokenEndpoint = "https://github.com/login/oauth/access_token";
-            //    options.UserInformationEndpoint = "https://api.github.com/user";
-
-            //    options.ClaimActions.MapJsonKey(ClaimTypes.NameIdentifier, "id");
-            //    options.ClaimActions.MapJsonKey(ClaimTypes.Name, "name");
-            //    options.ClaimActions.MapJsonKey("urn:github:login", "login");
-            //    options.ClaimActions.MapJsonKey("urn:github:url", "html_url");
-            //    options.ClaimActions.MapJsonKey("urn:github:avatar", "avatar_url");
-
-            //    options.Events = new OAuthEvents
-            //    {
-            //        OnCreatingTicket = async context =>
-            //        {
-            //            var request = new HttpRequestMessage(HttpMethod.Get, context.Options.UserInformationEndpoint);
-            //            request.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
-            //            request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", context.AccessToken);
-
-            //            var response = await context.Backchannel.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, context.HttpContext.RequestAborted);
-            //            response.EnsureSuccessStatusCode();
-
-            //            var user = JObject.Parse(await response.Content.ReadAsStringAsync());
-
-            //            context.RunClaimActions(user);
-            //            return;
-            //        }
-            //    };
-            //});
             services.AddCors(options =>
     options.AddPolicy("AllowMyOrigin",
 builder => builder.WithOrigins("https://localhost:44311").AllowAnyOrigin().AllowAnyMethod().AllowAnyHeader()
