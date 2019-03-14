@@ -29,7 +29,7 @@ namespace Shop_api.Controllers
         private SignInManager<User> _signInManager;
         private UserManager<User> _userManager;
         private IConfiguration _configuration;
-        //private RoleManager<User> _roleManager;
+        private RoleManager<IdentityRole> _roleManager;
         //private readonly IJwtFactory _jwtFactory;
         //private readonly JwtIssuerOptions _jwtOptions;
         IAuthenticationSchemeProvider _a;
@@ -38,8 +38,8 @@ namespace Shop_api.Controllers
                 IAuthenticationSchemeProvider a,
                 UserManager<User> userManager,
                 SignInManager<User> signInManager,
-                IConfiguration configuration
-            //RoleManager<User> roleManager,
+                IConfiguration configuration,
+                RoleManager<IdentityRole> roleManager
             //IJwtFactory jwtFactory,
             //JwtIssuerOptions jwtOptions
             )
@@ -48,7 +48,7 @@ namespace Shop_api.Controllers
             _userManager = userManager;
             _signInManager = signInManager;
             _configuration = configuration;
-            //_roleManager = roleManager;
+            _roleManager = roleManager;
             //_jwtFactory = jwtFactory;
         }
 
@@ -125,6 +125,7 @@ namespace Shop_api.Controllers
                         };
                         string password = dataObj.GetValue("id").ToString() + "123qweASD!@#";
                         await _userManager.CreateAsync(_user, password);
+                        await _userManager.AddToRoleAsync(_user, "Client");
                         // Залогинить _user по JWT
                         await _signInManager.SignInAsync(_user, true);
                         return JsonConvert.SerializeObject(GenerateJwtToken(_user.Email, _user));
@@ -132,16 +133,20 @@ namespace Shop_api.Controllers
                 }
             }
             return BadRequest("Ошибка");
-
         }
 
-        [Authorize]
+
+
+        //[Authorize]
         [HttpGet("test")]
         public async Task<IActionResult> tst()
         {
-            string token = HttpContext.Request.Headers.FirstOrDefault(x => x.Key == "Authorization").Value.ToString().Split(" ")[1];
-            string email = tokenParse(token).Claims.FirstOrDefault(x => x.Type == JwtRegisteredClaimNames.Email).Value.ToString();
-            return Ok(email);
+            //string token = HttpContext.Request.Headers.FirstOrDefault(x => x.Key == "Authorization").Value.ToString().Split(" ")[1];
+            //string email = tokenParse(token).Claims.FirstOrDefault(x => x.Type == JwtRegisteredClaimNames.Email).Value.ToString();
+            //return Ok(email);
+
+            return Content("created!!!");
+
         }
 
         [NonAction]
